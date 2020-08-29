@@ -3,47 +3,126 @@
  * 
  *  Daniel Roa
  *  A01021960
- */ 
+ */
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 5
-
-typedef void (* seleccion_u)();
+#define N 3
 
 typedef struct Libro
 {
-    char * titulo;
+    char *titulo;
     int paginas;
-}Libro;
+} Libro;
 
-void imprimeInt(int *, int);
+typedef void (*d_print)(void *);
+typedef void (*t_recorre)(void *, size_t, size_t, d_print);
+void recorre(t_recorre, void *, size_t, size_t, d_print);
 
-void imprimeLibro(Libro *, int);
+void *begin(void *valor)
+{
+    return valor;
+}
+
+void *end(void *valor, size_t cont, size_t tamanio)
+{
+    return (valor + (cont * tamanio) - tamanio);
+}
+
+void *next(void *valor, void *sup, size_t cont, size_t tamanio)
+{
+    void *next = sup + tamanio;
+    void *destino = end(valor, cont, tamanio);
+
+    if (next > destino)
+    {
+        return NULL;
+    }
+    return next;
+}
+
+void *prev(void *valor, void *sup, size_t cont, size_t tamanio)
+{
+    void *prev = sup - tamanio;
+    void *start = begin(valor);
+
+    if (prev < start)
+    {
+        return NULL;
+    }
+    return prev;
+}
+
+void forward(void *valor, size_t cont, size_t tamanio, d_print a)
+{
+    void *aux_skip = begin(valor);
+
+    while (aux_skip != NULL){
+        (*a)(aux_skip);
+        aux_skip = next(valor, aux_skip, cont, tamanio);
+    }
+}
+
+void backward(void *valor, size_t cont, size_t tamanio, d_print a)
+{
+    void *aux_ret = end(valor, cont, tamanio);
+    while (aux_ret != NULL)
+    {
+        (*a)(aux_ret);
+        aux_ret = prev(valor, aux_ret, cont, tamanio);
+    }
+}
+
+void bidirectional(void *valor, size_t cont, size_t tamanio, d_print a){
+
+    forward(valor, cont, tamanio, a);
+    backward(valor, cont, tamanio, a);
+}
+
+    void imprimeInt(int *val)
+{
+    printf(" %d ", *val);
+}
+
+void imprimeLibro(Libro * infoLibro)
+{
+    printf(" %s \t %d\n", infoLibro->titulo, infoLibro->paginas);
+}
+
+void recorre(t_recorre dir, void * valores, size_t cont, size_t tamanio, d_print a){
+    (*dir)(valores, cont, tamanio, a);
+}
 
 int main(int argc, char const *argv[])
 {
-    int * numeros = (int *) malloc(N * sizeof(int));
-    
-    int * sup = numeros;
-    int * end = numeros + N;
+    int *numeros = (int *)malloc(N * sizeof(int));
 
-    for (; sup < end; ++sup){
+    int *sup = numeros;
+    int *end = numeros + N;
+
+    for (; sup < end; ++sup)
+    {
         *sup = rand() % 100;
+        printf("%d ", *sup);
     }
-    
+
     printf("\n\nComenzando con los enteros\n\n");
 
-    imprimeInt(numeros, N);
+    /* imprimeInt(numeros, N); */
 
-    
+    Libro *tomo = (Libro *)malloc(sizeof(Libro) * N);
+    Libro *fin = tomo + N;
 
-    Libro * tomo = (Libro *)malloc(sizeof(Libro) * N);
+    printf("Primero forward\n");
+    recorre(&forward, numeros, N, sizeof(*numeros), &imprimeInt);
+    printf("\nDespués backward\n");
+    recorre(&backward, numeros, N, sizeof(*numeros), &imprimeInt);
+    printf("\nY bidireccional\n");
+    recorre(&bidirectional, numeros, N, sizeof(*numeros), &imprimeInt);
 
-    Libro * fin = tomo + N;
+    printf("\n\nAhora los libros!\n\n");
 
-    for (Libro * aux = tomo; aux < fin; ++aux)
-    {
+    for (Libro *aux = tomo; aux < fin; ++aux){
         aux->titulo = (char *)malloc(sizeof(char) * 20);
         printf("\nNombre del libro: ");
         scanf("%s", aux->titulo);
@@ -51,36 +130,21 @@ int main(int argc, char const *argv[])
         printf("Número de páginas: ");
         scanf("%d", &aux->paginas);
     }
-    
-    imprimeLibro(tomo, N);
 
-    free(tomo);
+    printf("\n");
+
+    printf("\nPrimero forward\n");
+    recorre(&forward, tomo, N, sizeof(Libro), &imprimeLibro);
+    printf("\nDespués backward\n");
+    recorre(&backward, tomo, N, sizeof(Libro), &imprimeLibro);
+    printf("\nY bidireccional\n");
+    recorre(&bidirectional, tomo, N, sizeof(Libro), &imprimeLibro);
+
     free(numeros);
 
-    return 0;
-}
-
-void imprimeInt(int * numeros, int cont){
-    int * sup = numeros;
-    int * fin = numeros + cont;
-
-    for (; sup < fin; ++sup)
-    {
-        printf(" %d ", *sup);
+    for (Libro * adc = tomo; adc < fin; ++adc){
+        free(adc->titulo);
     }
-    
-    printf("\n");
-}
 
-void imprimeLibro(Libro * tomo, int contLibros){
-     Libro * sup = tomo;
-     Libro * fin = sup + contLibros;
-
-    printf("\n\tTítulo \t\t No. de páginas");
-
-     for (; sup < fin; ++sup){
-         printf("\n\t%s \t\t %d", sup->titulo, sup->paginas);
-     }
-     
-    printf("\n");
+    return 0;
 }
